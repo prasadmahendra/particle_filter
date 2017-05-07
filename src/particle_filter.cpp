@@ -5,6 +5,20 @@
 
 #include "particle_filter.h"
 
+/**
+ * Pseudo code --> 
+ *
+ * ParticleFilter pf;
+ *
+ * foreach(time_step) {
+ *   if (time_step == 0)
+ *     pf.init();
+ *   pf.prediction();
+ *   pf.updateWeights();
+ *   pf.resample();
+ *   pf.calcError();
+ * }
+ */
 
 /**
  * init Initializes particle filter by initializing particles to Gaussian
@@ -17,26 +31,38 @@
  */
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
+  std::cout << "Init particle filter (Initial belief) ..." << std::endl;
+  
   // Set the number of particles.
   num_particles = 1000;
   
   // Set all weights to 1.
-  double p_weight = 1.0;
+  double p_init_weight = 1.0;
+  
+  // generate a gaussian distribution of x,y and theta values (http://en.cppreference.com/w/cpp/numeric/random/normal_distribution)
+  std::normal_distribution<double> x_norm_d     (/* mean */ x,     /* stddev */ std[0]);
+  std::normal_distribution<double> y_norm_d     (/* mean */ y,     /* stddev */ std[1]);
+  std::normal_distribution<double> theta_norm_d (/* mean */ theta, /* stddev */ std[2]);
+  
+  // pseudo random number generator
+  std::random_device rd;
+  std::mt19937 gen(rd());     // http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine
+                              // or alternatively http://www.cplusplus.com/reference/random/default_random_engine/
   
   for(int p_id = 0; p_id < num_particles; p_id++) {
     // Initialize all particles to first position (based on estimates of x, y, theta and their uncertainties from GPS) and all weights to 1.
+    // and add random Gaussian noise to each particle. i.e: Particle position values x, y, theta are picked randomly from a
+    // normal (gaussian) distribution centered (mean) around their initial position value and the given std deviations
+    
     Particle p = {
-      p_id,
-      p_weight,
-      x,
-      y,
-      theta
+      p_id,                     // particle unique id
+      p_init_weight,            // initial weight
+      x_norm_d(gen),            // particles x value (vehicles init x position estimate based on GPS + noise)
+      y_norm_d(gen),            // particles y value (vehicles init y position estimate based on GPS + noise)
+      theta_norm_d(gen)         // particles theta value (vehicles init theta estimate + noise)
     };
     
-    // Add random Gaussian noise to each particle.
-    // TODO
-    
-    weights.push_back(p_weight);
+    weights.push_back(p_init_weight);
     particles.push_back(p);
   }
   
