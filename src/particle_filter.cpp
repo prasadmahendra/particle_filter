@@ -26,11 +26,11 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   for(int p_id = 0; p_id < num_particles; p_id++) {
     // Initialize all particles to first position (based on estimates of x, y, theta and their uncertainties from GPS) and all weights to 1.
     Particle p = {
-        p_id,
-        p_weight,
-        x,
-        y,
-        theta
+      p_id,
+      p_weight,
+      x,
+      y,
+      theta
     };
     
     // Add random Gaussian noise to each particle.
@@ -98,10 +98,10 @@ void ParticleFilter::resample() {
  */
 
 void ParticleFilter::write(std::string filename) {
-	std::ofstream dataFile;
-	dataFile.open(filename, std::ios::app);
-	for (int i = 0; i < num_particles; ++i) {
-		dataFile << particles[i].x << " " << particles[i].y << " " << particles[i].theta << "\n";
-	}
-	dataFile.close();
+  std::ofstream dataFile;
+  dataFile.open(filename, std::ios::app);
+  for (int i = 0; i < num_particles; ++i) {
+    dataFile << particles[i].x << " " << particles[i].y << " " << particles[i].theta << "\n";
+  }
+  dataFile.close();
 }
