@@ -36,6 +36,17 @@ struct LandmarkObs {
   double y;			// Local (vehicle coordinates) y position of landmark observation [m]
 };
 
+
+/*
+ * Struct representing landmark to LandmarkObs association
+ */
+
+struct LandmarkDataAssoc {
+  Map::single_landmark_s map_landmark;
+  LandmarkObs observeration;
+  double distance;
+};
+
 /*
  * Computes the Euclidean distance between two 2D points.
  * @param (x1,y1) x and y coordinates of first point

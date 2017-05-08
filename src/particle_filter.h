@@ -2,6 +2,7 @@
 #define PARTICLE_FILTER_H_
 
 #include "helper_functions.h"
+#include <map>
 
 struct Particle {
   int id;
@@ -27,6 +28,15 @@ private:
   
   // Set of current particles
   std::vector<Particle> particles;
+  
+  // pseudo random number generator
+  std::mt19937 rand_generator;     // http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine
+                                   // or alternatively http://www.cplusplus.com/reference/random/default_random_engine/
+  
+  
+  double noisy(double mean, double stdev);
+  
+  
   
 public:
   
@@ -65,7 +75,7 @@ public:
    * @param predicted Vector of predicted landmark observations
    * @param observations Vector of landmark observations
    */
-  void dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations);
+  std::map<int, LandmarkDataAssoc> dataAssociation(double sensor_range, std::vector<Map::single_landmark_s> map_landmarks, std::vector<LandmarkObs>& observations);
   
   /**
    * updateWeights Updates the weights for each particle based on the likelihood of the
