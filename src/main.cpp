@@ -8,7 +8,7 @@
 
 using namespace std;
 
-#define DATA_FOLDER_PREFIX std::string("/Users/pmahendra/Projects/CarND/CarND-Kidnapped-Vehicle-Project/")
+#define DATA_FOLDER_PREFIX std::string("")
 
 int main() {
   
@@ -40,7 +40,7 @@ int main() {
   normal_distribution<double> N_theta_init(0, sigma_pos[2]);
   normal_distribution<double> N_obs_x(0, sigma_landmark[0]);
   normal_distribution<double> N_obs_y(0, sigma_landmark[1]);
-  double n_x, n_y, n_theta, n_range, n_heading;
+  double n_x, n_y, n_theta; //, n_range, n_heading;
   // Read map data
   Map map;
   if (!read_map_data(DATA_FOLDER_PREFIX + "data/map_data.txt", map)) {
