@@ -33,10 +33,9 @@ private:
   std::mt19937 rand_generator;     // http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine
                                    // or alternatively http://www.cplusplus.com/reference/random/default_random_engine/
   
-  
   double noisy(double mean, double stdev);
   
-  
+  static std::vector<LandmarkObs> carToMapCoord(const Particle particle, std::vector<LandmarkObs>& observations);
   
 public:
   
@@ -75,7 +74,7 @@ public:
    * @param predicted Vector of predicted landmark observations
    * @param observations Vector of landmark observations
    */
-  std::map<int, LandmarkDataAssoc> dataAssociation(double sensor_range, std::vector<Map::single_landmark_s> map_landmarks, std::vector<LandmarkObs>& observations);
+  std::map<int, LandmarkDataAssoc> dataAssociation(double sensor_range, Map& map_landmarks, std::vector<LandmarkObs>& observations);
   
   /**
    * updateWeights Updates the weights for each particle based on the likelihood of the

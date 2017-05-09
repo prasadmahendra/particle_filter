@@ -45,6 +45,7 @@ struct LandmarkDataAssoc {
   Map::single_landmark_s map_landmark;
   LandmarkObs observeration;
   double distance;
+  bool isInSensorRange;
 };
 
 /*

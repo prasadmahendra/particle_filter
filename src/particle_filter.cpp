@@ -56,10 +56,10 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     
     Particle p = {
       p_id,                           // particle unique id
-      p_init_weight,                  // initial weight
       x_norm_d(rand_generator),       // particles x value (vehicles init x position estimate based on GPS + noise)
       y_norm_d(rand_generator),       // particles y value (vehicles init y position estimate based on GPS + noise)
-      theta_norm_d(rand_generator)    // particles theta value (vehicles init theta estimate + noise)
+      theta_norm_d(rand_generator),   // particles theta value (vehicles init theta estimate + noise)
+      p_init_weight                   // initial weight
     };
     
     weights.push_back(p_init_weight);
@@ -79,13 +79,12 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
  * @param yaw_rate Yaw rate of car from t to t+1 [rad/s]
  */
 
-void ParticleFilter::prediction(double delta_t, double std_pos[] /* x [m], y [m], yaw [rad] */, double v /* velocity [m/s] */, double yawd /* yaw_rate [rad/s] */) {
+void ParticleFilter::prediction(double delta_t, double std_pos[] /* x [m], y [m], yaw [rad] */, double velocity /* velocity [m/s] */, double yawd /* yaw_rate [rad/s] */) {
   std::cout << "Prediction step (delta_t: " << delta_t << ")" << std::endl;
   
   // Predict the particles new position after delta_t seconds given the yaw rate (yawd) and velocity measurements.
-
   for(int p_id = 0; p_id < num_particles; p_id++) {
-    Particle p = particles[p_id];
+    Particle& p = particles[p_id];
     
     // extract values for better readability
     double p_x = p.x;
@@ -97,20 +96,20 @@ void ParticleFilter::prediction(double delta_t, double std_pos[] /* x [m], y [m]
     
     // avoid division by zero
     if (fabs(yawd) > 0.001) {
-      px_p = p_x + v/yawd * ( sin(yaw + yawd*delta_t) - sin(yaw) );
-      py_p = p_y + v/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
+      px_p = p_x + velocity/yawd * ( sin(yaw + yawd*delta_t) - sin(yaw) );
+      py_p = p_y + velocity/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
     } else {
-      px_p = p_x + v*delta_t*cos(yaw);
-      py_p = p_y + v*delta_t*sin(yaw);
+      px_p = p_x + velocity*delta_t*cos(yaw);
+      py_p = p_y + velocity*delta_t*sin(yaw);
     }
     
-    v_p = v;
+    v_p = velocity;
     yaw_p = yaw + yawd * delta_t;
     yawd_p = yawd;
     
     // update the particle with the predicted value + noise
-    p.x       = noisy(p_x, std_pos[0]);
-    p.y       = noisy(p_y, std_pos[1]);
+    p.x       = noisy(px_p, std_pos[0]);
+    p.y       = noisy(py_p, std_pos[1]);
     p.theta   = noisy(yaw_p, std_pos[2]);
   }
 }
@@ -119,6 +118,44 @@ double ParticleFilter::noisy(double mean, double stdev) {
   return (std::normal_distribution<double>(mean, stdev))(rand_generator);
 }
 
+
+std::vector<LandmarkObs> ParticleFilter::carToMapCoord(const Particle particle, std::vector<LandmarkObs>& observations) {
+  // convert observed landmark in car's coordinate system to map coordinate
+  std::vector<LandmarkObs> observations_conv = std::vector<LandmarkObs>();
+  
+  for( LandmarkObs& observation : observations ) {
+    // x_o = x_p + x_o' * cos(θ) - y_o' * sin(θ)
+    // y_o = y_p + x_o' * sin(θ) + y_o' * cos(θ)
+    
+    // where:
+    //  x_o  = observed x coordinate (in map coordinate system)
+    //  x_o' = observed x coordinate (in car coordinate system)
+    //  y_o  = observed y coordinate (in map coordinate system)
+    //  y_o' = observed y coordinate (in car coordinate system)
+    //  x_p  = particle x position (in map coordinate system)
+    //  y_p  = particle x position (in map coordinate system)
+    //  θ (theta) = yaw angle
+    
+    // expand vars for readability ....
+    double x_p = particle.x;
+    double y_p = particle.y;
+    double θ = particle.theta;
+    
+    // car to map converstion ...
+    double x_o = x_p + observation.x * cos(θ) - observation.y * sin(θ);
+    double y_o = y_p + observation.x * sin(θ) + observation.y * cos(θ);
+    
+    LandmarkObs o_conv = {
+      observation.id,
+      x_o,
+      y_o
+    };
+    
+    observations_conv.push_back(o_conv);
+  }
+  
+  return observations_conv;
+}
 
 /**
  * updateWeights Updates the weights for each particle based on the likelihood of the
@@ -130,65 +167,44 @@ double ParticleFilter::noisy(double mean, double stdev) {
  * @param map Map class containing map landmarks
  */
 
-void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], std::vector<LandmarkObs> observations, Map map_landmarks) {
-  // TODO
-  
+void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], std::vector<LandmarkObs> observations, Map map_landmarks)
+{
   for( int p_idx = 0; p_idx < particles.size(); p_idx++ ) {
-    Particle p = particles[p_idx];
-    // convert observed landmark in car's coordinate system to map coordinate
-    std::vector<LandmarkObs> observations_conv = std::vector<LandmarkObs>();
+    Particle& p = particles[p_idx];
     
-    for( const LandmarkObs observation : observations ) {
-      // x_o = x_p + x_o' * cos(θ) - y_o' * sin(θ)
-      // y_o = y_p + x_o' * sin(θ) + y_o' * cos(θ)
-
-      // where:
-      //  x_o  = observed x coordinate (in map coordinate system)
-      //  x_o' = observed x coordinate (in car coordinate system)
-      //  y_o  = observed y coordinate (in map coordinate system)
-      //  y_o' = observed y coordinate (in car coordinate system)
-      //  x_p  = particle x position (in map coordinate system)
-      //  y_p  = particle x position (in map coordinate system)
-      //  θ (theta) = yaw angle
-      
-      // expand vars for readability ....
-      double x_p = p.x;
-      double y_p = p.y;
-      double θ = p.theta;
-      
-      // car to map converstion ...
-      double x_o = x_p + observation.x * cos(θ) - observation.y * sin(θ);
-      double y_o = y_p + observation.x * sin(θ) + observation.y * cos(θ);
-      
-      LandmarkObs o_conv = {
-        observation.id,
-        x_o,
-        y_o
-      };
-      
-      observations_conv.push_back(o_conv);
-    }
+    // convert observed landmark in car's coordinate system to map coordinate
+    std::vector<LandmarkObs> observations_conv = carToMapCoord(p, observations);
     
     // data association
-    std::map<int, LandmarkDataAssoc> dataAssoc = dataAssociation(sensor_range, map_landmarks.landmark_list, observations_conv);
+    std::map<int, LandmarkDataAssoc> dataAssoc = dataAssociation(sensor_range, map_landmarks, observations_conv);
     //std::cout << "obs size: " << observations_conv.size() << " landmarks: " << map_landmarks.landmark_list.size() << " dataAssoc: " << dataAssoc.size() << std::endl;
     
     // update weight
-    double weight = 0.0;
+    double weight = 1.0;
     double sigma_x = std_landmark[0];
     double sigma_y = std_landmark[1];
     double sigma_x_pow2 = pow(sigma_x, 2);
     double sigma_y_pow2 = pow(sigma_y, 2);
     double C = 1.0 / (2.0 * M_PI * sigma_x * sigma_y);
     
-    for( std::map<int, LandmarkDataAssoc>::iterator it = dataAssoc.begin(); it != dataAssoc.end(); ++it ) {
-      // observation coords ...
-      double x_mu = it->second.observeration.x;
-      double y_mu = it->second.observeration.y;
+    //std::cout << " C = " << C << std::endl;
+    
+    for( LandmarkObs& observation : observations_conv )
+    {
+      if( !dataAssoc[observation.id].isInSensorRange ) {
+        //std::cout << "dataAssoc[observation.id].isInSensorRange = " << dataAssoc[observation.id].isInSensorRange << std::endl;
+        continue;
+      }
       
-      // closest landmark coords ...
-      double x = it->second.map_landmark.x_f;
-      double y = it->second.map_landmark.y_f;
+      // observation coords ...
+      double x_mu = observation.x;
+      double y_mu = observation.y;
+      
+      // associated closest landmark coords ...
+      Map::single_landmark_s closest_map_landmark = dataAssoc[observation.id].map_landmark;
+
+      double x = closest_map_landmark.x_f;
+      double y = closest_map_landmark.y_f;
       
       double x_diff = x - x_mu;
       double y_diff = y - y_mu;
@@ -197,12 +213,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], s
       weight *= C * exp(-e_raised);
     }
     
-    std::cout << " weight before: " << p.weight << " after:  " << weight << std::endl;
+    //std::cout << " weight before: " << p.weight << " after:  " << weight << std::endl;
     p.weight = weight;
     weights[p_idx] = weight;
   }
-  
-  
 }
 
 /**
@@ -212,37 +226,36 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], s
  * @param observations Vector of landmark observations
  */
 
-std::map<int, LandmarkDataAssoc> ParticleFilter::dataAssociation(double sensor_range, std::vector<Map::single_landmark_s> map_landmarks, std::vector<LandmarkObs>& observations) {
+std::map<int, LandmarkDataAssoc> ParticleFilter::dataAssociation(double sensor_range, Map& map_landmarks, std::vector<LandmarkObs>& observations) {
   // for each observation ...
   // for each landmark ...
   //  calc the euclidean distance vector/distance between observations and landmarks
   //  if the map landmark is within senor range *and* the map landmark is closest to the observed landmark
   //  then assoc map landmark to observed landmark
   
+  std::vector<Map::single_landmark_s> landmark_list = map_landmarks.landmark_list;
   std::map<int, LandmarkDataAssoc> dataAssoc = std::map<int, LandmarkDataAssoc> ();
   
-  for( LandmarkObs obs : observations ) {
+  for( LandmarkObs& obs : observations ) {
     double min_distance = -1;
     
-    for( Map::single_landmark_s map_landmark : map_landmarks ) {
-      double distance = sqrt(pow(obs.x - map_landmark.x_f, 2) + pow(obs.y - map_landmark.y_f, 2));
-      if( sensor_range < distance ) {
-        // This map landmark is beyond our sensor range
-        //continue;
-      }
+    for( Map::single_landmark_s map_landmark : landmark_list ) {
+      double distance = sqrt(pow(obs.x - map_landmark.x_f, 2) + pow(obs.y - map_landmark.y_f, 2));      
+      bool isInSensorRange = sensor_range >= distance;
       
       if( min_distance == -1 || distance < min_distance ) {
         //std::cout << "map_landmark.id = " << map_landmark.id_i << " distance = " << distance << std::endl;
         LandmarkDataAssoc assoc = {
             map_landmark,
             obs,
-            distance
+            distance,
+            isInSensorRange
         };
         
+        min_distance = distance;
+        obs.id = map_landmark.id_i;
         dataAssoc[map_landmark.id_i] = assoc;
       }
-      
-      min_distance = distance;
     }
   }
   
@@ -256,9 +269,16 @@ std::map<int, LandmarkDataAssoc> ParticleFilter::dataAssociation(double sensor_r
  */
 
 void ParticleFilter::resample() {
-  // TODO
+  std::discrete_distribution<> discrete_distribution(weights.begin(), weights.end());
+  std::vector<Particle> particles_weighted_resample;
   
-
+  for (int p_idx = 0; p_idx < num_particles; p_idx++) {
+    int weighted_pick = discrete_distribution(rand_generator);
+    particles_weighted_resample.push_back(particles[weighted_pick]);
+  }
+  
+  // Set the internal list of particles to the re-sampled ones
+  particles = particles_weighted_resample;
 }
 
 /*
