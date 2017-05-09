@@ -80,7 +80,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
  */
 
 void ParticleFilter::prediction(double delta_t, double std_pos[] /* x [m], y [m], yaw [rad] */, double velocity /* velocity [m/s] */, double yawd /* yaw_rate [rad/s] */) {
-  std::cout << "Prediction step (delta_t: " << delta_t << ")" << std::endl;
+  //std::cout << "Prediction step (delta_t: " << delta_t << ")" << std::endl;
   
   // Predict the particles new position after delta_t seconds given the yaw rate (yawd) and velocity measurements.
   for(int p_id = 0; p_id < num_particles; p_id++) {
@@ -118,6 +118,12 @@ double ParticleFilter::noisy(double mean, double stdev) {
   return (std::normal_distribution<double>(mean, stdev))(rand_generator);
 }
 
+/**
+ * carToMapCoord Converts from car coordinate system to global map coordinate system
+ * @param particle Particle (of the particle filter) relative to our observations
+ * @param observations Vector of landmark observations
+ * @returns Vector of landmark observations converted to map coordinate space
+ */
 
 std::vector<LandmarkObs> ParticleFilter::carToMapCoord(const Particle particle, std::vector<LandmarkObs>& observations) {
   // convert observed landmark in car's coordinate system to map coordinate
