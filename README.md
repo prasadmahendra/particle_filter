@@ -2,6 +2,8 @@
 
 A 2 dimensional particle filter in C++. Takes as input a map and some initial localization information (analogous to what a GPS would provide) and at each time step the filter receives (noisy) sensor and control data.
 
+[![Vehicle Tracking Particle Filter](http://img.youtube.com/vi/SI6gERmsuZ4/0.jpg)](https://youtu.be/SI6gERmsuZ4 "Vehicle Tracking Particle Filter")
+
 ## Running the Code
 
 ```
