@@ -126,7 +126,12 @@ double ParticleFilter::noisy(double mean, double stdev) {
  */
 
 std::vector<LandmarkObs> ParticleFilter::carToMapCoord(const Particle particle, std::vector<LandmarkObs>& observations) {
-  // convert observed landmark in car's coordinate system to map coordinate
+  // Convert observed landmark in car's coordinate system to map coordinate
+  // This transformation requires both rotation AND translation (but no scaling).
+  
+  // https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
+  // http://planning.cs.uiuc.edu/node99.html
+  
   std::vector<LandmarkObs> observations_conv = std::vector<LandmarkObs>();
   
   for( LandmarkObs& observation : observations ) {
@@ -178,14 +183,16 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], s
   for( int p_idx = 0; p_idx < particles.size(); p_idx++ ) {
     Particle& p = particles[p_idx];
     
-    // convert observed landmark in car's coordinate system to map coordinate
+    // The observations are given in the VEHICLE'S coordinate system. Your particles are located
+    // according to the MAP'S coordinate system. We will need to transform between the two systems.
+    // Convert observed landmark in car's coordinate system to map coordinate
     std::vector<LandmarkObs> observations_conv = carToMapCoord(p, observations);
     
     // data association
     std::map<int, LandmarkDataAssoc> dataAssoc = dataAssociation(sensor_range, map_landmarks, observations_conv);
     //std::cout << "obs size: " << observations_conv.size() << " landmarks: " << map_landmarks.landmark_list.size() << " dataAssoc: " << dataAssoc.size() << std::endl;
     
-    // update weight
+    // Update the weights of each particle using a mult-variate Gaussian distribution.
     double weight = 1.0;
     double sigma_x = std_landmark[0];
     double sigma_y = std_landmark[1];
@@ -233,6 +240,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], s
  */
 
 std::map<int, LandmarkDataAssoc> ParticleFilter::dataAssociation(double sensor_range, Map& map_landmarks, std::vector<LandmarkObs>& observations) {
+  // Find the predicted measurement that is closest to each observed measurement and assign the
+  // observed measurement to this particular landmark.
+  
   // for each observation ...
   // for each landmark ...
   //  calc the euclidean distance vector/distance between observations and landmarks
@@ -275,6 +285,10 @@ std::map<int, LandmarkDataAssoc> ParticleFilter::dataAssociation(double sensor_r
  */
 
 void ParticleFilter::resample() {
+  // Resample particles with replacement with probability proportional to their weight.
+  // Using std::discrete_distribution
+  // http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+  
   std::discrete_distribution<> discrete_distribution(weights.begin(), weights.end());
   std::vector<Particle> particles_weighted_resample;
   
@@ -283,7 +297,6 @@ void ParticleFilter::resample() {
     particles_weighted_resample.push_back(particles[weighted_pick]);
   }
   
-  // Set the internal list of particles to the re-sampled ones
   particles = particles_weighted_resample;
 }
 
